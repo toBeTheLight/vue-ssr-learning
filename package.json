@@ -1,0 +1,27 @@
+{
+  "name": "vue-ssr-learning",
+  "version": "1.0.0",
+  "description": "Learning by doing.",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/toBeTheLight/vue-ssr-learning.git"
+  },
+  "keywords": [
+    "vue-ssr",
+    "node"
+  ],
+  "author": "toBeTheLight",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/toBeTheLight/vue-ssr-learning/issues"
+  },
+  "homepage": "https://github.com/toBeTheLight/vue-ssr-learning#readme",
+  "dependencies": {
+    "vue": "^2.5.16",
+    "vue-server-renderer": "^2.5.16"
+  }
+}
