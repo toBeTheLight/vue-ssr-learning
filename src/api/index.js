@@ -6,7 +6,7 @@ function fetchItem (id) {
   return new Promise((resolve, reject) => {
     setTimeout(() => {
       resolve([id, id + id,id + id + id])
-    }, 1000)
+    }, 500)
   })
 }
 
