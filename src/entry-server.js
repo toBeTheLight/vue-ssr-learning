@@ -4,7 +4,6 @@ export default context => {
   return new Promise((resolve, reject) => {
     const { app, router, store } = createApp()
     // 设置 router 当前路径
-    console.log(context.url)
     router.push(context.url)
     // 在路由组件准备好之后
     router.onReady(() => {
