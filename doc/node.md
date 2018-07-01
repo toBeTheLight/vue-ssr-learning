@@ -221,7 +221,7 @@ UMD
   * process.memoryUsage()：查看 Node 进程的内存占用情况。{heapTotal: 堆中申请的内存, heapUsed: 堆中使用的内存量, rss: 进程常驻内存}
   * os.totalmem()：查看系统的总内存。
   * os.freemem()：查看系统的闲置内存。
-* 不通过 V8 进行分配的内存是堆外内存，如 Buffer 对象即不经过 V8 的内存分配，可以利用堆外内存一定程度上突破内存限制问题。
+* 不通过 V8 进行分配的内存是堆外内存，如 **Buffer** 对象即不经过 V8 的内存分配，可以利用堆外内存一定程度上突破内存限制问题。
 
 ## 内存泄漏
 
@@ -240,3 +240,30 @@ UMD
 ## 大内存应用
 
 针对大文件的读写使用 stream api。
+
+# 第六章 理解 Buffer
+
+## Buffer 结构
+
+Buffer 是一个像 Array 的对象。模块代码中性能相关的有 C++ 实现，非性能的由 JavaScript 实现。
+
+* Buffer 对象
+  Buffer 对象每一项为 16 进制的两位数，即 0 到 255。
+  * new Buffer(n)，创建长度为 n 字节的 Buffer 对象。
+  * 可通过 length 访问长度。
+  * 可通过下标赋值，如果赋值为非 0 - 255 的数，会进行处理，模 255 余数取正，或省略小数部分。
+
+* Buffer 内存分配
+  * Buffer 占用内存是堆外内存。大内存的使用不能采用使用一点申请一点的方式，采用的是在 C++ 层面申请内存，在 JavaScript 中分配内存的策略。
+  * Node 采用 slab 分配机制（动态内存管理机制），即 slab 是一块申请好的固定大小的内存区域，有三种状态:
+    * full：完全分配状态
+    * partial：部分分配状态
+    * empty：没有被分配状态
+  * Node 以 8KB 为界限来区分 Buffer 是大对象还是小对象。8KB 也是每个 slab 的大小值，在 JavaScript 层面，以它作为单位单元进行内存分配。
+
+1. 分配小 Buffer 对象，小于 8KB 的 Buffer 对象：
+使用中间量 pool 指向待分配的 slab 单元，如果 Buffer 的大小小于待分配的 slab 大小，则直接分配给 Buffer，并记录已分配字节，Buffer 同时记录使用的 slab 的区域。否则构建新的 slab 单元。
+2. 分配大 Buffer 对象。直接分配一个 SlowBuffer 对象作为 slab 单元，由大 Buffer 对象独占。
+
+同时由于一个 slab 可能分配给多个 Buffer，只有占用 slab 的 Buffer 都可以回收时，此 slab 才能被回收。
+
