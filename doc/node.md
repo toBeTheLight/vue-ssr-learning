@@ -267,3 +267,41 @@ Buffer 是一个像 Array 的对象。模块代码中性能相关的有 C++ 实�
 
 同时由于一个 slab 可能分配给多个 Buffer，只有占用 slab 的 Buffer 都可以回收时，此 slab 才能被回收。
 
+## Buffer 转换
+
+Buffer 对象与字符串之间可以互转，目前支持的字符串编码类型有：ASCII、UTF-8、UTF-16LE/UCS-2、Base64、Binary、Hex。
+
+* 字符串转 Buffer:
+  ```
+  new Buffer(str, [encoding])
+  ```
+  不传 encoding 则默认 UTF-8
+* 写入
+  ```
+  buf.write(string, [offset], [length], [encoding])
+  ```
+  一个 Buffer 可写入不同编码的内容。
+* Buffer 转字符串
+  ```
+  buf.toString([encoding], [start], [end])
+  ```
+* 不支持的编码类型需要借助第三方库
+
+## Buffer 的拼接
+
+```
+var rs = fs.createReadStream('test.md')
+var data = ''
+rs.on('data', function (chunk) {
+  data += chunk
+})
+```
+
+* 截断：当我们使用这种 `data += chunk` 拼接 Buffer 时，其实是自动调用了 `data.toString() + chunk.toString()`，在这种情况下，像宽字节的中文可能会出现截断，导致表示一个中文汉字的字节被分开转换，导致乱码。
+* 初步解决：通过设置可读流的 encode ，即 `rs.setEncoding('utf-8')`，内部使用 decoder 对象，会对长度不够的部分暂存，与下一个串拼接转换。但是只支持 UTF-8、Base64、UCS-2/UTF-16LE。
+* 完整解决：数组接收，`Buffer.concat(chunks, size)`转换，然后输出
+
+## Buffer 性能
+
+* 减少字符串和 Buffer 的转换，静态数据提前转换为 Buffer，无须再每次响应时进行转换
+* 文件读取时的 highWaterMark 参数设置，其对 Buffer 内存的分配和使用有一定影响，同时设置过小时，可导致系统调用次数过多
