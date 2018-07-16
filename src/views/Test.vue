@@ -1,34 +1,41 @@
 <template>
   <div>
-    <h1>test</h1>
-    <input type="text">
-    <button @click="set">设置数组</button>
+    <Child @complete="complete"/>
+    <Child2 :result="result"/>
   </div>
 </template>
 
 <script>
+import Child from './Child.vue'
+import Child2 from './Child2.vue'
 export default {
+  name: 'test',
   asyncData ({store, router}) {
     console.log('将会发送请求')
-    return store.dispatch('fetchItem', 123)
   },
-  watch: {
-    items: {
-      handler (newVal, oldVal) {
-        console.log(newVal === oldVal)
-      },
-      immediate: true
-    } 
+  data () {
+    return {
+      result: 123
+    }
   },
   methods: {
-    set () {
-      this.$store.dispatch('fetchItem', 123)
-    }
+    complete () {
+      console.log('子组件生成完毕，修改父组件的data')
+      this.result = 'complete'
+    },
   },
-  computed: {
-    items () {
-      return this.$store.state.items
-    }
+  created () {
+    console.log('fa: created')
+  },
+  beforeMount () {
+    console.log('fa: beforeMounted')
+  },
+  mounted () {
+    console.log('fa: mounted')
+  },
+  components: {
+    Child,
+    Child2
   }
 }
 </script>

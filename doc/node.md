@@ -305,3 +305,27 @@ rs.on('data', function (chunk) {
 
 * 减少字符串和 Buffer 的转换，静态数据提前转换为 Buffer，无须再每次响应时进行转换
 * 文件读取时的 highWaterMark 参数设置，其对 Buffer 内存的分配和使用有一定影响，同时设置过小时，可导致系统调用次数过多
+
+# 第七章 网络编程
+
+node 提供了 net、dgram、http、https 四个模块，分别用于处理 TCP、UDP、HTTP、HTTPS，适用于服务器端和客户端。
+
+## 创建 TCP 服务
+
+使用 net 模块
+
+```js
+let net = require('net')
+let server = net.createServer(socket => {
+  socket.on('data', () => {
+    socket.write('回复')
+  })
+})
+// 监听
+server.listen(8124, () => {
+  console.log('server bound')
+})
+```
+
+* TCP 服务的事件
+

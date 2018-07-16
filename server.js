@@ -41,8 +41,9 @@ function render (req, res) {
     url: req.url
   }
   // 渲染为字符串
-  renderer.renderToString(context)
-    .then(html => {
+  const promise = renderer.renderToString(context)
+  console.log('返回渲染结果')
+    promise.then(html => {
       // 成功返回
       res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'});
       res.end(html)
@@ -60,7 +61,9 @@ app.use(favicon('./public/favicon.ico'))
 // 创建服务
 app.get('*', isProd ? render : (req, res) => {
   console.log('接到请求')
-  readyPromise.then(() => render(req, res))
+  readyPromise.then(() => {
+    return render(req, res)
+  })
 })
 // 开启服务
 app.listen(port, () => {
