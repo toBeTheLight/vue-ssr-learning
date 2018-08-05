@@ -308,15 +308,15 @@ rs.on('data', function (chunk) {
 
 # 第七章 网络编程
 
-node 提供了 net、dgram、http、https 四个模块，分别用于处理 TCP、UDP、HTTP、HTTPS，适用于服务器端和客户端。
+node 提供了 net、dgram、http、https 四个模块，分别用于处理 TCP、UDP、HTTP、HTTPS，适用于服务器端和客户端。网络基础部分知识省略，见其他文章。
 
 ## 创建 TCP 服务
 
 使用 net 模块
 
 ```js
-let net = require('net')
-let server = net.createServer(socket => {
+const net = require('net')
+const server = net.createServer(socket => {
   socket.on('data', () => {
     socket.write('回复')
   })
@@ -328,4 +328,91 @@ server.listen(8124, () => {
 ```
 
 * TCP 服务的事件
+  * 服务器事件
+    * listening：绑定端口或 Domain Socket 后触发
+    * connection：每个客户端套接字连接到服务器端时触发
+    * close：服务器关闭时触发，server.close() 后停止接收新的套接字连接，但是保持当前存在的连接，所有连接断开后触发
+    * error：异常时
+  * 连接事件
+    * data：一端调用 write() 发送数据时触发，由于对数据的优化算法（如集中发送小数据的 Nagle 算法）的存在，不是每次 write 都会触发 data 事件
+    * end：任意一段发送了 FIN 数据时触发
+    * connect：用于客户端，套接字与服务器端连接成功时触发
+    * drain：任意一段调用 write() 发送数据时，当前端触发
+    * error：异常时
+    * close：套接字完全关闭时触发
+    * timeout：当一定时间后连接不在活跃是触发
 
+## 构建 UDP 服务
+
+```js
+const dgram = require('dgram')
+const server = dgram.createSocket('udp4')
+server.bind(41234) // 端口监听
+server.on('xxx', fn) // message、listening 事件的监听
+```
+* UDP 套接字事件
+  * message：UDP 套接字侦听网卡端口后接收到消息时，数据为 Buffer 对象和一个远程地址信息
+  * listening：UDP 套接字开始侦听时触发该消息
+  * close：调用 close() 时触发，并不再触发 message 事件，需再次触发时需重新绑定
+  * error：异常时
+
+## 构建 HTTP 服务
+
+HTTP 网络知识略
+
+* http 模块：node 中 http 模块继承自 TCP 服务器（net 模块）
+* 请求部分：
+  * 报文头很简单使用 req 或 req.headers 直接访问
+  * 报文体：抽象为只读流对象，需要在数据流结束后才能进行对报文体的操作
+  ```js
+  function (req, res) {
+    let buffers = []
+    req.on('data', (trunk) => {
+      buffers.push(trunk)
+    }).on('end', () => {
+      const buffer = Buffer.concat(buffers)
+    })
+  }
+  ```
+* 响应部分：可将其看成一个可写的流对象
+  * 响应头：
+    * setHeader：可以使用 setHeader 进行多次设置
+    * writeHeader：只有调用 writeHead 后报头才会写入连接中
+  * 响应体：res.write() 和 res.end()，后者会结束当前响应
+    * 一旦开始发送数据，不可再设置 header
+  * 事件：
+    * connection：连接建立时
+    * request：请求数据发送到服务器端
+    * close：与 TCP 的 close 相同
+    * checkContinue：某些客户端发送较大数据时会先发送一个头部带有 Expect：100-continue 的请求到服务器。客户端收到 100 Continue 后重新发起请求时才会触发 request 事件
+    * connect：客户端发起 CONNECT 请求时
+    * upgrade：客户端要求升级连接的协议时，见 WebSocket 部分
+    * clientError：连接的客户端触发 error 事件时
+* HTTP 客户端
+  * 响应：解析完响应头触发 response 事件，传递响应对象以供操作，后续响应报文体以只读流的方式提供
+  * 代理：在 keepalive 的情况下一个底层会话连接可以多次用于请求，但是是有上限的，通过 http 模块的默认客户端代理对象 http.globalAgent 管理，实质是一个连接池，同时发送的请求在超出上限时会等待前面的请求完成
+
+## 构建 WebSocket 服务
+
+* WebSocket 客户端基于事件的编程模型和 Node 中自定义事件相差无几
+* WebSocket 实现了客户端与服务器端之间的长连接，而 Node 中自定义事件相差无几
+基于以上两点，Node 和 WebSocket 很契合
+WebSocket 协议主要分为两部分：握手和数据传输。握手是由 HTTP 完成的。
+
+* 握手
+  1. 通过 HTTP 发起请求报文，两个特殊协议头 `Upgrade: websocket` 和 `Connection: Upgrade` 表示请求服务器端升级协议为 WebSocket。
+  2. Sec-WebSocket_key 字段的 随机 Base64 编码字符串的值会被服务器端混合并试用 sha1 安全散列算法计算结果后进行 Base64 编码返回客户端。用于安全校验。
+  3. Sec-WebSocket-Protocol 和 Sec-WebSocket-Version 字段用于指定子协议和版本号。
+  4. 服务器端处理完成后，发送给客户端，客户端将校验 Sec-webSocket-Accept 的值，成功则开始数据传输
+* 数据传输
+  1. 握手完成后，客户端的 onopen 会被触发执行
+  2. 后续使用 send 方法和对应的 message 监听完成数据传输
+  3. 安全上，客户端需要对发送的数据帧进行掩码处理，而服务端不需要。换言之，服务端收到无掩码数据或客户端收到掩码数据，连接将关闭
+
+## 安全
+
+Node 在 网络安全方面提供了三个模块，crypto（加解密）、tls、https。
+
+HTTPS 网络知识略
+
+HTTPS 服务相对于 HTTP 差别只是在证书相关参数上
